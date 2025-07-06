@@ -1,6 +1,22 @@
+# Fix for ChromaDB SQLite compatibility in Streamlit Cloud
+import sys
+import os
+
+# Check if we're in a Streamlit Cloud environment and fix SQLite
+try:
+    import sqlite3
+    if sqlite3.sqlite_version_info < (3, 35, 0):
+        # Try to use pysqlite3 as a replacement
+        try:
+            import pysqlite3 as sqlite3
+            sys.modules['sqlite3'] = sqlite3
+        except ImportError:
+            pass
+except ImportError:
+    pass
+
 import streamlit as st
 import pandas as pd
-import os
 import json
 import shutil
 import time
@@ -1339,17 +1355,48 @@ elif st.session_state.active_page == "Settings":
 elif st.session_state.active_page == "AI Insights":
     st.markdown(f"<h1>🤖 AI Insights</h1>", unsafe_allow_html=True)
     
-    # Import AI agents
-    from ai_agents import CarbonFootprintAgents
+    # Import AI agents with error handling
+    try:
+        from ai_agents import CarbonFootprintAgents
+        ai_agents_available = True
+    except Exception as e:
+        ai_agents_available = False
+        st.error(f"AI Agents are currently unavailable due to a system issue: {str(e)}")
+        st.info("Please check that all dependencies are installed correctly and try again later.")
+        st.markdown("### Manual Carbon Accounting Tips")
+        st.markdown("""
+        While AI features are unavailable, here are some manual guidance tips:
+        
+        **🔍 Data Classification:**
+        - **Scope 1**: Direct emissions from owned/controlled sources (fuel combustion, fleet vehicles)
+        - **Scope 2**: Indirect emissions from purchased energy (electricity, steam, heating)
+        - **Scope 3**: All other indirect emissions (business travel, purchased goods, waste)
+        
+        **📊 Data Quality:**
+        - Aim for measured data whenever possible
+        - Document your calculation methods
+        - Use region-specific emission factors
+        
+        **🎯 Reduction Strategies:**
+        - Focus on energy efficiency first
+        - Consider renewable energy options
+        - Optimize transportation and logistics
+        """)
     
-    # Initialize AI agents
-    if 'ai_agents' not in st.session_state:
-        st.session_state.ai_agents = CarbonFootprintAgents()
+    if ai_agents_available:
+        # Initialize AI agents
+        if 'ai_agents' not in st.session_state:
+            try:
+                st.session_state.ai_agents = CarbonFootprintAgents()
+            except Exception as e:
+                st.error(f"Failed to initialize AI agents: {str(e)}")
+                ai_agents_available = False
     
-    # Create tabs for different AI insights
-    ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
+    if ai_agents_available:
+        # Create tabs for different AI insights
+        ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
 
-    with ai_tabs[0]:
+        with ai_tabs[0]:
         st.markdown("<h3>Data Entry Assistant</h3>", unsafe_allow_html=True)
         st.markdown("Get help with classifying emissions and mapping them to the correct scope.")
         
