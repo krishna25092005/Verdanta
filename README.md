@@ -73,6 +73,17 @@ cd Verdanta
 
 2. **Install dependencies**
 
+For basic functionality (recommended for first deployment):
+```bash
+pip install -r requirements-basic.txt
+```
+
+For full AI features:
+```bash
+pip install -r requirements-full.txt
+```
+
+Or use the standard requirements:
 ```bash
 pip install -r requirements.txt
 ```
@@ -126,10 +137,19 @@ docker run -p 8501:8501 -e GROQ_API_KEY=your_key_here verdanta
 
 ### Troubleshooting Deployment
 
+**SQLite/ChromaDB Issues:**
+- If you encounter SQLite version errors, try using `requirements-basic.txt` first:
+  ```bash
+  pip install -r requirements-basic.txt
+  ```
+- For full AI features, use `requirements-full.txt` (requires compatible environment)
+- The app will work without AI features if dependencies fail to load
+
 **Common Issues:**
-- **SQLite Version Error**: Fixed automatically with `pysqlite3-binary` dependency
+- **SQLite Version Error**: Use `requirements-basic.txt` for basic functionality
 - **Missing API Key**: Add `GROQ_API_KEY` to your secrets or environment variables
-- **Import Errors**: Ensure all dependencies in `requirements.txt` are properly installed
+- **Import Errors**: Start with basic requirements, then add AI features
+- **Memory Issues**: Use Docker deployment for better resource management
 
 ## 📋 Usage Guide
 
