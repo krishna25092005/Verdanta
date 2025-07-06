@@ -4,7 +4,6 @@ import os
 import json
 import shutil
 import time
-import importlib.util
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
@@ -1340,222 +1339,188 @@ elif st.session_state.active_page == "Settings":
 elif st.session_state.active_page == "AI Insights":
     st.markdown(f"<h1>🤖 AI Insights</h1>", unsafe_allow_html=True)
     
-    # Check if AI agents are available
-    try:
-        # Import AI agents
-        from ai_agents import CarbonFootprintAgents
-        
-        # Initialize AI agents
-        if 'ai_agents' not in st.session_state:
-            st.session_state.ai_agents = CarbonFootprintAgents()
-        
-        ai_available = True
-    except Exception as e:
-        ai_available = False
-        st.error(f"🚫 AI Features Temporarily Unavailable")
-        st.warning(f"Technical details: {str(e)}")
-        st.info("The app will work normally, but AI insights are disabled. Please check your environment setup.")
+    # Import AI agents
+    from ai_agents import CarbonFootprintAgents
     
-    if ai_available:
-        # Create tabs for different AI insights
-        ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
+    # Initialize AI agents
+    if 'ai_agents' not in st.session_state:
+        st.session_state.ai_agents = CarbonFootprintAgents()
+    
+    # Create tabs for different AI insights
+    ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
 
-        with ai_tabs[0]:
-            st.markdown("<h3>Data Entry Assistant</h3>", unsafe_allow_html=True)
-            st.markdown("Get help with classifying emissions and mapping them to the correct scope.")
+    with ai_tabs[0]:
+        st.markdown("<h3>Data Entry Assistant</h3>", unsafe_allow_html=True)
+        st.markdown("Get help with classifying emissions and mapping them to the correct scope.")
+        
+        data_description = st.text_area("Describe your emission activity", 
+                                      placeholder="Example: We use diesel generators for backup power at our office in Mumbai. How should I categorize this?")
+        
+        if st.button("Get Assistance", key="data_assistant_btn"):
+            if data_description:
+                with st.spinner("AI assistant is analyzing your request..."):
+                    try:
+                        result = st.session_state.ai_agents.run_data_entry_crew(data_description)
+                        # Handle CrewOutput object by converting it to string
+                        result_str = str(result)
+                        st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}. Please check your API key and try again.")
+            else:
+                st.warning("Please describe your emission activity first.")
+    
+    with ai_tabs[1]:
+        st.markdown("<h3>Report Summary Generator</h3>", unsafe_allow_html=True)
+        st.markdown("Generate a human-readable summary of your emissions data.")
+        
+        if len(st.session_state.emissions_data) == 0:
+            st.warning("No emissions data available. Please add data first.")
+        else:
+            if st.button("Generate Summary", key="report_summary_btn"):
+                with st.spinner("Generating report summary..."):
+                    try:
+                        # Convert DataFrame to string representation for the AI
+                        emissions_str = st.session_state.emissions_data.to_string()
+                        result = st.session_state.ai_agents.run_report_summary_crew(emissions_str)
+                        # Handle CrewOutput object by converting it to string
+                        result_str = str(result)
+                        st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}. Please check your API key and try again.")
+    
+    with ai_tabs[2]:
+        st.markdown("<h3>Carbon Offset Advisor</h3>", unsafe_allow_html=True)
+        st.markdown("Get recommendations for verified carbon offset options based on your profile.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            location = st.text_input("Location", placeholder="e.g., Mumbai, India")
+            industry = st.selectbox("Industry", ["Manufacturing", "Technology", "Agriculture", "Transportation", "Energy", "Services", "Other"])
+        
+        if len(st.session_state.emissions_data) == 0:
+            st.warning("No emissions data available. Please add data first.")
+        else:
+            total_emissions = st.session_state.emissions_data['emissions_kgCO2e'].sum()
+            st.markdown(f"<p>Total emissions to offset: <strong>{total_emissions:.2f} kgCO2e</strong></p>", unsafe_allow_html=True)
             
-            data_description = st.text_area("Describe your emission activity", 
-                                          placeholder="Example: We use diesel generators for backup power at our office in Mumbai. How should I categorize this?")
-            
-            if st.button("Get Assistance", key="data_assistant_btn"):
-                if data_description:
-                    with st.spinner("AI assistant is analyzing your request..."):
+            if st.button("Get Offset Recommendations", key="offset_advisor_btn"):
+                if location:
+                    with st.spinner("Finding offset options..."):
                         try:
-                            result = st.session_state.ai_agents.run_data_entry_crew(data_description)
-                            # Handle CrewOutput object by converting it to string
+                            result = st.session_state.ai_agents.run_offset_advice_crew(total_emissions, location, industry)
+                            # Handle CrewOutput object by converting it to str
                             result_str = str(result)
                             st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
                         except Exception as e:
                             st.error(f"Error: {str(e)}. Please check your API key and try again.")
                 else:
-                    st.warning("Please describe your emission activity first.")
+                    st.warning("Please enter your location.")
     
-        with ai_tabs[1]:
-            st.markdown("<h3>Report Summary Generator</h3>", unsafe_allow_html=True)
-            st.markdown("Generate a human-readable summary of your emissions data.")
-            
-            if len(st.session_state.emissions_data) == 0:
-                st.warning("No emissions data available. Please add data first.")
+    with ai_tabs[3]:
+        st.markdown("<h3>Regulation Radar</h3>", unsafe_allow_html=True)
+        st.markdown("Get insights on current and upcoming carbon regulations relevant to your business.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            location = st.text_input("Company Location", placeholder="e.g., Jakarta, Indonesia", key="reg_location")
+            industry = st.selectbox("Industry Sector", ["Manufacturing", "Technology", "Agriculture", "Transportation", "Energy", "Services", "Other"], key="reg_industry")
+        with col2:
+            export_markets = st.multiselect("Export Markets", ["European Union", "Japan", "United States", "China", "Indonesia", "India", "Other"])
+        
+        if st.button("Check Regulations", key="regulation_radar_btn"):
+            if location and len(export_markets) > 0:
+                with st.spinner("Analyzing regulatory requirements..."):
+                    try:
+                        result = st.session_state.ai_agents.run_regulation_check_crew(location, industry, ", ".join(export_markets))
+                        # Handle CrewOutput object by converting it to str
+                        if hasattr(result, 'raw'):
+                            st.success(str(result.raw))
+                        else:
+                            st.success(str(result))
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}. Please check your API key and try again.")
             else:
-                if st.button("Generate Summary", key="report_summary_btn"):
-                    with st.spinner("Generating report summary..."):
-                        try:
-                            # Convert DataFrame to string representation for the AI
-                            emissions_str = st.session_state.emissions_data.to_string()
-                            result = st.session_state.ai_agents.run_report_summary_crew(emissions_str)
-                            # Handle CrewOutput object by converting it to string
-                            result_str = str(result)
-                            st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}. Please check your API key and try again.")
+                st.warning("Please enter your location and select at least one export market.")
     
-        with ai_tabs[2]:
-            st.markdown("<h3>Carbon Offset Advisor</h3>", unsafe_allow_html=True)
-            st.markdown("Get recommendations for verified carbon offset options based on your profile.")
+    with ai_tabs[4]:
+        st.markdown("<h3>Emission Optimizer</h3>", unsafe_allow_html=True)
+        st.markdown("Get AI-powered recommendations to reduce your carbon emissions.")
+        
+        if len(st.session_state.emissions_data) == 0:
+            st.warning("No emissions data available. Please add data first.")
+        else:
+            # Display current emissions summary
+            total_emissions = st.session_state.emissions_data['emissions_kgCO2e'].sum()
+            scope_breakdown = st.session_state.emissions_data.groupby('scope')['emissions_kgCO2e'].sum()
             
             col1, col2 = st.columns(2)
             with col1:
-                location = st.text_input("Location", placeholder="e.g., Mumbai, India")
-                industry = st.selectbox("Industry", ["Manufacturing", "Technology", "Agriculture", "Transportation", "Energy", "Services", "Other"])
+                st.markdown(f"**Total Emissions:** {total_emissions:.2f} kgCO2e")
+                st.markdown("**Breakdown by Scope:**")
+                for scope, emissions in scope_breakdown.items():
+                    percentage = (emissions / total_emissions * 100) if total_emissions > 0 else 0
+                    st.markdown(f"• {scope}: {emissions:.2f} kgCO2e ({percentage:.1f}%)")
             
-            if len(st.session_state.emissions_data) == 0:
-                st.warning("No emissions data available. Please add data first.")
-            else:
-                total_emissions = st.session_state.emissions_data['emissions_kgCO2e'].sum()
-                st.markdown(f"<p>Total emissions to offset: <strong>{total_emissions:.2f} kgCO2e</strong></p>", unsafe_allow_html=True)
-                
-                if st.button("Get Offset Recommendations", key="offset_advisor_btn"):
-                    if location:
-                        with st.spinner("Finding offset options..."):
-                            try:
-                                result = st.session_state.ai_agents.run_offset_advice_crew(total_emissions, location, industry)
-                                # Handle CrewOutput object by converting it to str
-                                result_str = str(result)
-                                st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
-                            except Exception as e:
-                                st.error(f"Error: {str(e)}. Please check your API key and try again.")
-                    else:
-                        st.warning("Please enter your location.")
-    
-        with ai_tabs[3]:
-            st.markdown("<h3>Regulation Radar</h3>", unsafe_allow_html=True)
-            st.markdown("Get insights on current and upcoming carbon regulations relevant to your business.")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                location = st.text_input("Company Location", placeholder="e.g., Jakarta, Indonesia", key="reg_location")
-                industry = st.selectbox("Industry Sector", ["Manufacturing", "Technology", "Agriculture", "Transportation", "Energy", "Services", "Other"], key="reg_industry")
             with col2:
-                export_markets = st.multiselect("Export Markets", ["European Union", "Japan", "United States", "China", "Indonesia", "India", "Other"])
+                target_reduction = st.slider("Target Reduction (%)", min_value=5, max_value=50, value=20, step=5)
+                focus_area = st.selectbox(
+                    "Focus Area", 
+                    ["All Scopes", "Scope 1 (Direct)", "Scope 2 (Energy)", "Scope 3 (Indirect)"],
+                    help="Select which emission scope to focus optimization on"
+                )
             
-            if st.button("Check Regulations", key="regulation_radar_btn"):
-                if location and len(export_markets) > 0:
-                    with st.spinner("Analyzing regulatory requirements..."):
-                        try:
-                            result = st.session_state.ai_agents.run_regulation_check_crew(location, industry, ", ".join(export_markets))
-                            # Handle CrewOutput object by converting it to str
-                            if hasattr(result, 'raw'):
-                                st.success(str(result.raw))
-                            else:
-                                st.success(str(result))
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}. Please check your API key and try again.")
-                else:
-                    st.warning("Please enter your location and select at least one export market.")
-    
-        with ai_tabs[4]:
-            st.markdown("<h3>Emission Optimizer</h3>", unsafe_allow_html=True)
-            st.markdown("Get AI-powered recommendations to reduce your carbon emissions.")
-            
-            if len(st.session_state.emissions_data) == 0:
-                st.warning("No emissions data available. Please add data first.")
-            else:
-                # Display current emissions summary
-                total_emissions = st.session_state.emissions_data['emissions_kgCO2e'].sum()
-                scope_breakdown = st.session_state.emissions_data.groupby('scope')['emissions_kgCO2e'].sum()
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(f"**Total Emissions:** {total_emissions:.2f} kgCO2e")
-                    st.markdown("**Breakdown by Scope:**")
-                    for scope, emissions in scope_breakdown.items():
-                        percentage = (emissions / total_emissions * 100) if total_emissions > 0 else 0
-                        st.markdown(f"• {scope}: {emissions:.2f} kgCO2e ({percentage:.1f}%)")
-                
-                with col2:
-                    target_reduction = st.slider("Target Reduction (%)", min_value=5, max_value=50, value=20, step=5)
-                    focus_area = st.selectbox(
-                        "Focus Area", 
-                        ["All Scopes", "Scope 1 (Direct)", "Scope 2 (Energy)", "Scope 3 (Indirect)"],
-                        help="Select which emission scope to focus optimization on"
-                    )
-                
-                if st.button("Get Optimization Recommendations", key="optimizer_btn"):
-                    with st.spinner("AI is analyzing your emissions and generating optimization strategies..."):
-                        try:
-                            # Prepare data summary for AI
-                            emissions_summary = {
-                                "total_emissions": total_emissions,
-                                "scope_breakdown": scope_breakdown.to_dict(),
-                                "target_reduction": target_reduction,
-                                "focus_area": focus_area,
-                                "top_categories": st.session_state.emissions_data.groupby('category')['emissions_kgCO2e'].sum().nlargest(5).to_dict()
-                            }
+            if st.button("Get Optimization Recommendations", key="optimizer_btn"):
+                with st.spinner("AI is analyzing your emissions and generating optimization strategies..."):
+                    try:
+                        # Prepare data summary for AI
+                        emissions_summary = {
+                            "total_emissions": total_emissions,
+                            "scope_breakdown": scope_breakdown.to_dict(),
+                            "target_reduction": target_reduction,
+                            "focus_area": focus_area,
+                            "top_categories": st.session_state.emissions_data.groupby('category')['emissions_kgCO2e'].sum().nlargest(5).to_dict()
+                        }
+                        
+                        # Convert to string for AI processing
+                        data_str = str(emissions_summary)
+                        
+                        result = st.session_state.ai_agents.run_optimization_crew(data_str)
+                        # Handle CrewOutput object by converting it to str
+                        if hasattr(result, 'raw'):
+                            result_str = str(result.raw)
+                        else:
+                            result_str = str(result)
+                        
+                        st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
+                        
+                        # Add implementation tracking
+                        st.markdown("### Implementation Tracker")
+                        if st.checkbox("I want to track implementation of these recommendations"):
+                            implementation_notes = st.text_area(
+                                "Implementation Notes", 
+                                placeholder="Track your progress on implementing the AI recommendations..."
+                            )
+                            target_date = st.date_input("Target Implementation Date")
                             
-                            # Convert to string for AI processing
-                            data_str = str(emissions_summary)
-                            
-                            result = st.session_state.ai_agents.run_optimization_crew(data_str)
-                            # Handle CrewOutput object by converting it to str
-                            if hasattr(result, 'raw'):
-                                result_str = str(result.raw)
-                            else:
-                                result_str = str(result)
-                            
-                            st.markdown(f"<div class='stCard'>{result_str}</div>", unsafe_allow_html=True)
-                            
-                            # Add implementation tracking
-                            st.markdown("### Implementation Tracker")
-                            if st.checkbox("I want to track implementation of these recommendations"):
-                                implementation_notes = st.text_area(
-                                    "Implementation Notes", 
-                                    placeholder="Track your progress on implementing the AI recommendations..."
-                                )
-                                target_date = st.date_input("Target Implementation Date")
-                                
-                                if st.button("Save Implementation Plan"):
-                                    st.success("Implementation plan saved! You can track progress in the Dashboard.")
-                            
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}. Please check your API key and try again.")
-                            
-                            # Provide fallback recommendations
-                            st.markdown("### Fallback Recommendations")
-                            st.markdown("""
-                            <div class='stCard'>
-                            <h4>General Emission Reduction Strategies:</h4>
-                            <ul>
-                            <li><strong>Energy Efficiency:</strong> Upgrade to LED lighting, optimize HVAC systems</li>
-                            <li><strong>Renewable Energy:</strong> Consider solar panels or green energy procurement</li>
-                            <li><strong>Transportation:</strong> Promote remote work, electric vehicles, or public transport</li>
-                            <li><strong>Waste Reduction:</strong> Implement circular economy principles, reduce packaging</li>
-                            <li><strong>Supply Chain:</strong> Work with suppliers to reduce their emissions</li>
-                            </ul>
-                            </div>
-                            """, unsafe_allow_html=True)
-    
-    else:
-        st.markdown("""
-        ### Manual Carbon Accounting Guide
-        
-        **📊 Scope Classification:**
-        - **Scope 1**: Direct emissions (fuel, fleet vehicles)
-        - **Scope 2**: Purchased energy (electricity, steam)
-        - **Scope 3**: Value chain emissions (travel, supplies)
-        
-        **💡 Quick Tips:**
-        - Use regional emission factors from official sources
-        - Document your data sources and calculation methods
-        - Update emissions data monthly for better trends
-        - Focus on energy efficiency and renewable energy
-        """)
-        
-    st.markdown("""
-    ---
-    <div style='text-align: center; color: #666; padding: 20px;'>
-    © 2025 Verdanta - Carbon Accounting Made Simple<br>
-    Product Owner: Krishna Chauhan | krishna.chauhan4@s.amity.edu
-    </div>
-    """, unsafe_allow_html=True)
+                            if st.button("Save Implementation Plan"):
+                                st.success("Implementation plan saved! You can track progress in the Dashboard.")
+                        
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}. Please check your API key and try again.")
+                        
+                        # Provide fallback recommendations
+                        st.markdown("### Fallback Recommendations")
+                        st.markdown("""
+                        <div class='stCard'>
+                        <h4>General Emission Reduction Strategies:</h4>
+                        <ul>
+                        <li><strong>Energy Efficiency:</strong> Upgrade to LED lighting, optimize HVAC systems</li>
+                        <li><strong>Renewable Energy:</strong> Consider solar panels or green energy procurement</li>
+                        <li><strong>Transportation:</strong> Promote remote work, electric vehicles, or public transport</li>
+                        <li><strong>Waste Reduction:</strong> Implement circular economy principles, reduce packaging</li>
+                        <li><strong>Supply Chain:</strong> Work with suppliers to reduce their emissions</li>
+                        </ul>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 
