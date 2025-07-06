@@ -93,6 +93,44 @@ streamlit run app.py
 5. **Access the application**
    Open your browser and navigate to `http://localhost:8501`
 
+## 🚀 Deployment
+
+### Streamlit Cloud Deployment
+
+1. **Fork the repository** to your GitHub account
+
+2. **Deploy to Streamlit Cloud**:
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Connect your GitHub account
+   - Select this repository
+   - Set the main file path to `app.py`
+
+3. **Configure secrets**:
+   - In your Streamlit Cloud app dashboard, go to "Settings" → "Secrets"
+   - Add your environment variables:
+   ```toml
+   GROQ_API_KEY = "your_groq_api_key_here"
+   ```
+
+4. **Deploy**: Your app will automatically deploy and be available at `https://your-app-name.streamlit.app`
+
+### Docker Deployment (Optional)
+
+```bash
+# Build the image
+docker build -t verdanta .
+
+# Run the container
+docker run -p 8501:8501 -e GROQ_API_KEY=your_key_here verdanta
+```
+
+### Troubleshooting Deployment
+
+**Common Issues:**
+- **SQLite Version Error**: Fixed automatically with `pysqlite3-binary` dependency
+- **Missing API Key**: Add `GROQ_API_KEY` to your secrets or environment variables
+- **Import Errors**: Ensure all dependencies in `requirements.txt` are properly installed
+
 ## 📋 Usage Guide
 
 ### Getting Started
