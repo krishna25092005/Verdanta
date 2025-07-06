@@ -1,0 +1,10 @@
+[theme]
+# Use dark mode for better visibility and contrast
+primaryColor = "#4CAF50"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+base = "dark"
+
+[server]
+port = 8501

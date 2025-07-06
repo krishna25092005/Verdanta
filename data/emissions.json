@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2025-07-05",
+    "scope": "Scope 1",
+    "category": "Stationary Combustion",
+    "activity": "Boiler",
+    "quantity": 0.20000000000000004,
+    "unit": "kWh",
+    "emission_factor": 1.85,
+    "emissions_kgCO2e": 0.3700000000000001,
+    "notes": "",
+    "business_unit": "Corporate",
+    "project": "Not Applicable",
+    "country": "India",
+    "facility": "Mumbai HQ",
+    "responsible_person": "",
+    "data_quality": "Medium",
+    "verification_status": "Unverified"
+  }
+]
