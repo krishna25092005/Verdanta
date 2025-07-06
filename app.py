@@ -1355,18 +1355,32 @@ elif st.session_state.active_page == "Settings":
 elif st.session_state.active_page == "AI Insights":
     st.markdown(f"<h1>🤖 AI Insights</h1>", unsafe_allow_html=True)
     
-    # Import AI agents
-    from ai_agents import CarbonFootprintAgents
+    # Check if AI agents are available
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("ai_agents")
+        if spec is None:
+            raise ImportError("ai_agents module not found")
+        
+        from ai_agents import CarbonFootprintAgents
+        
+        # Initialize AI agents
+        if 'ai_agents' not in st.session_state:
+            st.session_state.ai_agents = CarbonFootprintAgents()
+        
+        ai_available = True
+    except Exception as e:
+        ai_available = False
+        st.error(f"🚫 AI Features Temporarily Unavailable")
+        st.warning(f"Technical details: {str(e)}")
+        st.info("The app will work normally, but AI insights are disabled. Please check your environment setup.")
     
-    # Initialize AI agents
-    if 'ai_agents' not in st.session_state:
-        st.session_state.ai_agents = CarbonFootprintAgents()
-    
-    # Create tabs for different AI insights
-    ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
+    if ai_available:
+        # Create tabs for different AI insights
+        ai_tabs = st.tabs(["Data Assistant", "Report Summary", "Offset Advisor", "Regulation Radar", "Emission Optimizer"])
 
-    with ai_tabs[0]:
-        st.markdown("<h3>Data Entry Assistant</h3>", unsafe_allow_html=True)
+        with ai_tabs[0]:
+            st.markdown("<h3>Data Entry Assistant</h3>", unsafe_allow_html=True)
         st.markdown("Get help with classifying emissions and mapping them to the correct scope.")
         
         data_description = st.text_area("Describe your emission activity", 
@@ -1538,3 +1552,18 @@ elif st.session_state.active_page == "AI Insights":
                         </ul>
                         </div>
                         """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        ### Manual Carbon Accounting Guide
+        
+        **📊 Scope Classification:**
+        - **Scope 1**: Direct emissions (fuel, fleet vehicles)
+        - **Scope 2**: Purchased energy (electricity, steam)
+        - **Scope 3**: Value chain emissions (travel, supplies)
+        
+        **💡 Quick Tips:**
+        - Use regional emission factors from official sources
+        - Document your data sources and calculation methods
+        - Update emissions data monthly for better trends
+        - Focus on energy efficiency and renewable energy
+        """)

@@ -3,6 +3,20 @@ AI Agents for Verdanta application.
 Uses CrewAI to create agents for various tasks.
 """
 
+# Fix for ChromaDB SQLite compatibility
+import sys
+try:
+    import sqlite3
+    if sqlite3.sqlite_version_info < (3, 35, 0):
+        # Try to use pysqlite3 as a replacement
+        try:
+            import pysqlite3 as sqlite3
+            sys.modules['sqlite3'] = sqlite3
+        except ImportError:
+            pass
+except ImportError:
+    pass
+
 import os
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, LLM
