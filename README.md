@@ -59,8 +59,8 @@ pip (Python package manager)
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/verdanta.git
-cd verdanta
+git clone https://github.com/krishna25092005/Verdanta.git
+cd Verdanta
 ```
 
 2. **Install dependencies**
